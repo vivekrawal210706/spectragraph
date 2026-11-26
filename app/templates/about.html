@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}About — SpectraGraph{% endblock %}
+
+{% block head %}
+<style>
+    .about-card {
+        margin-bottom: 20px;
+    }
+
+    .about-card h2.card-title {
+        font-size: 1.1rem;
+    }
+
+    .about-card p {
+        margin-bottom: 10px;
+        line-height: 1.65;
+    }
+
+    .about-card p:last-child {
+        margin-bottom: 0;
+    }
+
+    .about-card ul {
+        padding-left: 20px;
+        margin: 8px 0 0;
+        line-height: 1.65;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="about-page">
+    <div class="page-header">
+        <h1 class="page-title">About Project</h1>
+        <p class="page-subtitle">Academic overview and linear algebra foundations behind SpectraGraph</p>
+    </div>
+
+    <!-- 1. Project Title -->
+    <section class="card about-card">
+        <div class="card-header">
+            <h2 class="card-title">1. Spectral Graph Connectivity Analyzer</h2>
+            <span class="badge">Linear Algebra (BTech Computer Science)</span>
+        </div>
+        <div class="card-body">
+            <p>
+                <strong>SpectraGraph</strong> is an interactive academic software system developed for a Linear Algebra course in BTech Computer Science. It demonstrates how matrix representations of graphs and eigenvalue decomposition reveal structural graph properties—specifically graph connectivity, connected component counts, and natural graph bisections—and cross-checks spectral results against classical graph algorithms.
+            </p>
+        </div>
+    </section>
+
+    <!-- 2. What is a Graph? -->
+    <section class="card about-card">
+        <div class="card-header">
+            <h2 class="card-title">2. What is a Graph?</h2>
+        </div>
+        <div class="card-body">
+            <p>
+                A graph <em>G</em> = (<em>V</em>, <em>E</em>) consists of a finite set of <strong>vertices</strong> (or nodes) <em>V</em> = {<em>v</em><sub>1</sub>, <em>v</em><sub>2</sub>, &hellip;, <em>v</em><sub><em>n</em></sub>} and a set of <strong>edges</strong> <em>E</em> representing pairwise relationships between vertices.
+            </p>
+            <ul>
+                <li><strong>Undirected vs. Directed:</strong> In an undirected graph, each edge {<em>u</em>, <em>v</em>} is symmetric (bidirectional), whereas in a directed graph an edge (<em>u</em>, <em>v</em>) has orientation from <em>u</em> to <em>v</em>.</li>
+                <li><strong>Simple Graphs:</strong> A simple undirected graph has no self-loops (no edge from a vertex to itself) and at most one edge between any pair of distinct vertices. SpectraGraph models simple undirected graphs.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 3. Graph Connectivity -->
+    <section class="card about-card">
+        <div class="card-header">
+            <h2 class="card-title">3. Graph Connectivity</h2>
+        </div>
+        <div class="card-body">
+            <p>
+                A <strong>path</strong> between vertices <em>u</em> and <em>v</em> is a sequence of distinct vertices connected by edges in <em>E</em>. A graph is <strong>connected</strong> if there is a path between every pair of vertices; otherwise, the graph is <strong>disconnected</strong>.
+            </p>
+            <p>
+                Every graph partitions uniquely into maximal connected subgraphs called <strong>connected components</strong>. A connected graph has exactly <em>k</em> = 1 connected component, while a disconnected graph has <em>k</em> &ge; 2 components.
+            </p>
+        </div>
+    </section>
+
+    <!-- 4. Adjacency Matrix -->
+    <section class="card about-card">
+        <div class="card-header">
+            <h2 class="card-title">4. Adjacency Matrix (<em>A</em>)</h2>
+        </div>
+        <div class="card-body">
+            <p>
+                For a graph with <em>n</em> vertices, the <strong>Adjacency Matrix</strong> <em>A</em> &isin; &#8477;<sup><em>n</em>&times;<em>n</em></sup> records which pairs of vertices are adjacent:
+            </p>
+            <div class="math-formula">
+                <em>A</em><sub><em>ij</em></sub> = 1 if {<em>v</em><sub><em>i</em></sub>, <em>v</em><sub><em>j</em></sub>} &isin; <em>E</em>, &nbsp; and &nbsp; 0 otherwise
+            </div>
+            <ul>
+                <li><strong>Symmetric:</strong> Because edges are undirected, <em>A</em> = <em>A</em><sup>T</sup> (<em>A</em><sub><em>ij</em></sub> = <em>A</em><sub><em>ji</em></sub>).</li>
+                <li><strong>Binary:</strong> All entries are either 0 or 1 in an unweighted simple graph.</li>
+                <li><strong>Zero Diagonal:</strong> With no self-loops, <em>A</em><sub><em>ii</em></sub> = 0 for all <em>i</em>.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 5. Degree Matrix -->
+    <section class="card about-card">
+        <div class="card-header">
+            <h2 class="card-title">5. Degree Matrix (<em>D</em>)</h2>
+        </div>
+        <div class="card-body">
+            <p>
+                The <strong>degree</strong> <em>d</em><sub><em>i</em></sub> = deg(<em>v</em><sub><em>i</em></sub>) of vertex <em>v</em><sub><em>i</em></sub> is the number of edges incident to it, computed as the row sum of <em>A</em>: <em>d</em><sub><em>i</em></sub> = &sum;<sub><em>j</em>=1</sub><sup><em>n</em></sup> <em>A</em><sub><em>ij</em></sub>.
+            </p>
+            <p>
+                The <strong>Degree Matrix</strong> <em>D</em> &isin; &#8477;<sup><em>n</em>&times;<em>n</em></sup> is a diagonal matrix containing vertex degrees along the main diagonal and zeros elsewhere:
+            </p>
+            <div class="math-formula">
+                <em>D</em><sub><em>ii</em></sub> = deg(<em>v</em><sub><em>i</em></sub>), &nbsp;&nbsp;&nbsp; <em>D</em><sub><em>ij</em></sub> = 0 for <em>i</em> &ne; <em>j</em>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. Graph Laplacian -->
+    <section class="card about-card">
+        <div class="card-header">
+            <h2 class="card-title">6. Graph Laplacian (<em>L</em> = <em>D</em> &minus; <em>A</em>)</h2>
+        </div>
+        <div class="card-body">
+            <p>
+                The combinatorial <strong>Graph Laplacian</strong> is defined as the difference between the Degree Matrix and the Adjacency Matrix:
+            </p>
+            <div class="math-formula">
+                <em>L</em> = <em>D</em> &minus; <em>A</em>
+            </div>
+            <ul>
+                <li><strong>Symmetric:</strong> Since both <em>D</em> and <em>A</em> are symmetric, <em>L</em> = <em>L</em><sup>T</sup>, guaranteeing real eigenvalues and orthogonal eigenvectors.</li>
+                <li><strong>Positive Semi-Definite (PSD):</strong> For every vector <em>x</em> &isin; &#8477;<sup><em>n</em></sup>, <em>x</em><sup>T</sup><em>Lx</em> = &sum;<sub>{<em>i</em>,<em>j</em>}&isin;<em>E</em></sub> (<em>x</em><sub><em>i</em></sub> &minus; <em>x</em><sub><em>j</em></sub>)<sup>2</sup> &ge; 0, so all eigenvalues satisfy &lambda;<sub><em>i</em></sub> &ge; 0.</li>
+                <li><strong>Zero Row Sums:</strong> Each row sums to <em>d</em><sub><em>i</em></sub> &minus; &sum;<sub><em>j</em></sub> <em>A</em><sub><em>ij</em></sub> = 0, meaning the all-ones vector <strong>1</strong> always satisfies <em>L</em><strong>1</strong> = <strong>0</strong>.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 7. Eigenvalues and Graph Structure -->
+    <section class="card about-card">
+        <div class="card-header">
+            <h2 class="card-title">7. Eigenvalues and Graph Structure</h2>
+        </div>
+        <div class="card-body">
+            <p>
+                Ordering the Laplacian eigenvalues in non-decreasing order gives 0 = &lambda;<sub>1</sub> &le; &lambda;<sub>2</sub> &le; &hellip; &le; &lambda;<sub><em>n</em></sub>. This spectrum encodes global topological structure:
+            </p>
+            <div class="math-formula">
+                Key Theorem: Multiplicity of &lambda; = 0 in <em>L</em> equals the number of connected components <em>k</em>
+            </div>
+            <p>
+                <strong>Null Space Interpretation:</strong> A vector <em>x</em> lies in the null space ker(<em>L</em>) (i.e., <em>Lx</em> = <strong>0</strong>) if and only if <em>x</em><sup>T</sup><em>Lx</em> = &sum;<sub>{<em>i</em>,<em>j</em>}&isin;<em>E</em></sub> (<em>x</em><sub><em>i</em></sub> &minus; <em>x</em><sub><em>j</em></sub>)<sup>2</sup> = 0, which forces <em>x</em><sub><em>i</em></sub> = <em>x</em><sub><em>j</em></sub> across every edge. Hence, <em>x</em> must be constant on each connected component, so the dimension of ker(<em>L</em>) equals the exact number of connected components <em>k</em>.
+            </p>
+        </div>
+    </section>
+
+    <!-- 8. Fiedler Vector -->
+    <section class="card about-card">
+        <div class="card-header">
+            <h2 class="card-title">8. Fiedler Vector &amp; Algebraic Connectivity (&lambda;<sub>2</sub>)</h2>
+        </div>
+        <div class="card-body">
+            <p>
+                The second-smallest eigenvalue <strong>&lambda;<sub>2</sub></strong> is called the <strong>algebraic connectivity</strong> (introduced by Miroslav Fiedler). A graph is connected if and only if &lambda;<sub>2</sub> &gt; 0, and larger &lambda;<sub>2</sub> indicates stronger connectivity without tight bottlenecks.
+            </p>
+            <p>
+                The eigenvector <strong><em>v</em><sub>2</sub></strong> associated with &lambda;<sub>2</sub> is the <strong>Fiedler vector</strong>. Because <em>v</em><sub>2</sub> is orthogonal to <strong>1</strong> and minimizes the quadratic form <em>x</em><sup>T</sup><em>Lx</em> / <em>x</em><sup>T</sup><em>x</em>, partitioning vertices by the sign of their entries (<em>v</em><sub>2</sub>(<em>i</em>) &ge; 0 vs. <em>v</em><sub>2</sub>(<em>i</em>) &lt; 0) yields a <strong>spectral bisection</strong> that separates the graph into two sparsely connected groups.
+            </p>
+        </div>
+    </section>
+
+    <!-- 9. Verification Methods -->
+    <section class="card about-card">
+        <div class="card-header">
+            <h2 class="card-title">9. Independent Verification Methods (BFS &amp; Union-Find)</h2>
+        </div>
+        <div class="card-body">
+            <p>
+                Floating-point eigenvalue solvers can encounter numerical near-zero tolerances on ill-conditioned or large graphs. To validate spectral component counts independently, SpectraGraph runs two exact combinatorial algorithms:
+            </p>
+            <ul>
+                <li><strong>Breadth-First Search (BFS):</strong> Explores reachable vertices layer-by-layer from unvisited nodes, counting each traversal sweep as one connected component.</li>
+                <li><strong>Union-Find (Disjoint-Set):</strong> Merges endpoints of every edge using path compression and union by rank/size, counting the remaining disjoint sets.</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- 10. Mathematical Concepts Used -->
+    <section class="card about-card">
+        <div class="card-header">
+            <h2 class="card-title">10. Mathematical Concepts Used</h2>
+        </div>
+        <div class="card-body">
+            <ul>
+                <li><strong>Matrices:</strong> Matrix representation of graphs (<em>A</em>, <em>D</em>, and <em>L</em> = <em>D</em> &minus; <em>A</em>).</li>
+                <li><strong>Eigenvalues &amp; Eigenvectors:</strong> Characteristic decomposition <em>Lv</em> = &lambda;<em>v</em> and spectrum ordering.</li>
+                <li><strong>Null Space (Kernel):</strong> Relating ker(<em>L</em>) and zero-eigenvalue multiplicity to connected components.</li>
+                <li><strong>Symmetric Matrices:</strong> Spectral theorem ensuring real eigenvalues and positive semi-definiteness.</li>
+                <li><strong>Orthogonality:</strong> Mutual orthogonality of eigenvectors (<em>v</em><sub>2</sub> &perp; <strong>1</strong>) enabling spectral bisection.</li>
+                <li><strong>Graph Connectivity:</strong> Paths, components, algebraic connectivity (&lambda;<sub>2</sub>), and combinatorial verification.</li>
+            </ul>
+        </div>
+    </section>
+</div>
+{% endblock %}

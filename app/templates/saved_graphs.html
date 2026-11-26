@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Saved Graphs — SpectraGraph{% endblock %}
+
+{% block head %}
+<style>
+    .page-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .export-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .export-dropdown-menu {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        min-width: 130px;
+        background: var(--bg-card, #1e222d);
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.14));
+        border-radius: var(--radius-sm, 8px);
+        box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.45));
+        padding: 4px;
+        z-index: 200;
+    }
+
+    .export-dropdown-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: none;
+        color: var(--text-primary, #e2e8f0);
+        padding: 7px 10px;
+        font-size: 0.82rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .export-dropdown-item:hover {
+        background: var(--bg-card-hover, rgba(255, 255, 255, 0.08));
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="saved-graphs-page">
+    <div class="page-header">
+        <div class="page-header-row">
+            <div>
+                <h1 class="page-title">Saved Graphs</h1>
+                <p class="page-subtitle">Manage stored graphs, launch spectral analysis, or export graph data</p>
+            </div>
+            <a href="/graph-builder" class="btn btn-primary">Create New</a>
+        </div>
+    </div>
+
+    {% if graphs and graphs|length > 0 %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Nodes</th>
+                            <th>Edges</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for g in graphs %}
+                        <tr>
+                            <td><strong>{{ g.name }}</strong></td>
+                            <td style="max-width: 280px; color: var(--text-secondary, #94a3b8); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ g.description or '—' }}
+                            </td>
+                            <td>{{ g.node_count if g.node_count is defined else (g.nodes|length if g.nodes is defined else 0) }}</td>
+                            <td>{{ g.edge_count if g.edge_count is defined else (g.edges|length if g.edges is defined else 0) }}</td>
+                            <td>{{ (g.created_at|string)[:16] if g.created_at else '—' }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="/graph-builder?id={{ g.id }}" class="btn btn-secondary btn-sm">Open</a>
+                                    <a href="/analysis?graph_id={{ g.id }}" class="btn btn-primary btn-sm">Analyze</a>
+                                    <div class="export-dropdown">
+                                        <button type="button" class="btn btn-secondary btn-sm export-toggle-btn" onclick="toggleExportMenu(event, {{ g.id }})">
+                                            Export &#9662;
+                                        </button>
+                                        <div class="export-dropdown-menu" id="exportMenu-{{ g.id }}" style="display: none;">
+                                            <button type="button" class="export-dropdown-item" onclick="exportSavedGraph({{ g.id }}, 'json')">Export JSON</button>
+                                            <button type="button" class="export-dropdown-item" onclick="exportSavedGraph({{ g.id }}, 'csv')">Export CSV</button>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="deleteGraph({{ g.id }})" class="btn btn-danger btn-sm">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="empty-state">
+            <p class="empty-state-text">No saved graphs. Create one in the Graph Builder.</p>
+            <a href="/graph-builder" class="btn btn-primary">Create New</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function closeAllExportMenus() {
+        document.querySelectorAll('.export-dropdown-menu').forEach(function (menu) {
+            menu.style.display = 'none';
+        });
+    }
+
+    function toggleExportMenu(event, graphId) {
+        event.stopPropagation();
+        var menu = document.getElementById('exportMenu-' + graphId);
+        if (!menu) return;
+        var isVisible = menu.style.display === 'block';
+        closeAllExportMenus();
+        menu.style.display = isVisible ? 'none' : 'block';
+    }
+
+    document.addEventListener('click', function () {
+        closeAllExportMenus();
+    });
+
+    async function exportSavedGraph(graphId, format) {
+        closeAllExportMenus();
+        try {
+            var res = await fetch('/api/graphs/' + graphId);
+            if (!res.ok) {
+                if (window.showToast) window.showToast('Failed to load graph for export.', 'error');
+                return;
+            }
+            var data = await res.json();
+            var safeName = (data.name || ('graph_' + graphId)).replace(/[^a-zA-Z0-9_-]+/g, '_');
+            var content = '';
+            var mime = 'application/json';
+            var ext = 'json';
+
+            if (format === 'csv') {
+                mime = 'text/csv;charset=utf-8;';
+                ext = 'csv';
+                var labelById = {};
+                (data.nodes || []).forEach(function (n) {
+                    labelById[n.id] = n.label || ('v' + n.id);
+                });
+                var lines = ['source,target'];
+                (data.edges || []).forEach(function (e) {
+                    var src = e.source_node_id !== undefined ? e.source_node_id : e.source;
+                    var tgt = e.target_node_id !== undefined ? e.target_node_id : e.target;
+                    lines.push((labelById[src] || src) + ',' + (labelById[tgt] || tgt));
+                });
+                content = lines.join('\n');
+            } else {
+                content = JSON.stringify(data, null, 2);
+            }
+
+            var blob = new Blob([content], { type: mime });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = safeName + '.' + ext;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Export failed:', err);
+            if (window.showToast) window.showToast('Error exporting graph.', 'error');
+        }
+    }
+</script>
+{% endblock %}

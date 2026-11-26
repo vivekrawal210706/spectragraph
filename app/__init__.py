@@ -1,0 +1,1 @@
+"""SpectraGraph Flask application package."""

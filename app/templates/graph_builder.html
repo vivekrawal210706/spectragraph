@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block title %}Graph Builder — SpectraGraph{% endblock %}
+
+{% block head %}
+<style>
+    .toolbar-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .toolbar-right {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .toolbar-separator {
+        width: 1px;
+        height: 24px;
+        background: var(--border-color, rgba(255, 255, 255, 0.12));
+        margin: 0 4px;
+    }
+
+    .dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .dropdown-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        min-width: 210px;
+        background: var(--bg-card, #1e222d);
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.14));
+        border-radius: var(--radius-sm, 8px);
+        box-shadow: var(--shadow-lg, 0 10px 28px rgba(0, 0, 0, 0.45));
+        padding: 6px;
+        z-index: 250;
+    }
+
+    .dropdown-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: none;
+        color: var(--text-primary, #e2e8f0);
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .dropdown-item:hover {
+        background: var(--bg-card-hover, rgba(255, 255, 255, 0.08));
+    }
+
+    .mode-indicator-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 14px;
+        margin: 10px 0 12px;
+        border-radius: var(--radius-sm, 8px);
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        color: var(--text-primary, #e2e8f0);
+        font-size: 0.85rem;
+    }
+
+    .graph-canvas {
+        position: relative;
+    }
+
+    #graphCanvas {
+        width: 100%;
+        height: 100%;
+        min-height: 520px;
+    }
+
+    .canvas-hint {
+        position: absolute;
+        bottom: 12px;
+        left: 16px;
+        pointer-events: none;
+        font-size: 0.78rem;
+        color: var(--text-muted, #94a3b8);
+    }
+
+    .panel-section {
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    }
+
+    .panel-section:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .panel-section-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--text-primary, #f1f5f9);
+    }
+
+    .panel-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .panel-stat-box {
+        background: var(--bg-secondary, rgba(255, 255, 255, 0.03));
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+        border-radius: var(--radius-sm, 8px);
+        padding: 10px 8px;
+        text-align: center;
+    }
+
+    .panel-stat-num {
+        display: block;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text-primary, #f1f5f9);
+    }
+
+    .panel-stat-lbl {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #94a3b8);
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+    }
+
+    .info-row-label {
+        color: var(--text-secondary, #94a3b8);
+    }
+
+    .rename-row {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    }
+
+    .rename-input-group {
+        display: flex;
+        gap: 6px;
+        margin-top: 6px;
+    }
+
+    .instructions-list {
+        padding-left: 18px;
+        font-size: 0.82rem;
+        line-height: 1.55;
+        color: var(--text-secondary, #94a3b8);
+    }
+
+    .instructions-list li {
+        margin-bottom: 4px;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 12, 18, 0.72);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 16px;
+    }
+
+    .modal-dialog {
+        width: 100%;
+        max-width: 420px;
+    }
+
+    .analyze-prominent {
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="graph-builder-page">
+    <div class="page-header" style="margin-bottom: 16px;">
+        <h1 class="page-title">Graph Builder</h1>
+        <p class="page-subtitle">Construct, edit, import, and analyze undirected graphs interactively</p>
+    </div>
+
+    <div class="graph-toolbar">
+        <div class="toolbar-group">
+            <button type="button" id="addNodeBtn" class="btn btn-primary btn-sm">Add Node</button>
+            <button type="button" id="addEdgeBtn" class="btn btn-secondary btn-sm">Add Edge</button>
+            <button type="button" id="removeSelectedBtn" class="btn btn-danger btn-sm">Remove Selected</button>
+
+            <div class="toolbar-separator"></div>
+
+            <div class="dropdown" id="sampleDropdown">
+                <button type="button" id="sampleDropdownBtn" class="btn btn-secondary btn-sm" aria-haspopup="true" aria-expanded="false">
+                    Sample Graphs &#9662;
+                </button>
+                <div class="dropdown-menu" id="sampleDropdownMenu" style="display: none;">
+                    <button type="button" class="dropdown-item" onclick="loadSample('path')">Path Graph (P6)</button>
+                    <button type="button" class="dropdown-item" onclick="loadSample('cycle')">Cycle Graph (C6)</button>
+                    <button type="button" class="dropdown-item" onclick="loadSample('complete')">Complete Graph (K5)</button>
+                    <button type="button" class="dropdown-item" onclick="loadSample('star')">Star Graph (S6)</button>
+                    <button type="button" class="dropdown-item" onclick="loadSample('disconnected')">Disconnected Graph</button>
+                    <button type="button" class="dropdown-item" onclick="loadSample('two_community')">Two-Community Graph</button>
+                    <button type="button" class="dropdown-item" onclick="loadSample('petersen')">Petersen Graph</button>
+                </div>
+            </div>
+
+            <button type="button" id="randomGraphBtn" class="btn btn-secondary btn-sm">Random Graph</button>
+            <button type="button" id="clearGraphBtn" class="btn btn-secondary btn-sm">Clear</button>
+            <button type="button" id="relayoutBtn" class="btn btn-secondary btn-sm">Re-layout</button>
+        </div>
+
+        <div class="toolbar-right">
+            <button type="button" id="importBtn" class="btn btn-secondary btn-sm">Import</button>
+            <button type="button" id="exportBtn" class="btn btn-secondary btn-sm">Export</button>
+            <button type="button" id="saveGraphBtn" class="btn btn-primary btn-sm">Save</button>
+            <button type="button" id="analyzeBtn" class="btn btn-primary btn-sm analyze-prominent">Analyse</button>
+        </div>
+    </div>
+
+    <div id="modeIndicator" class="mode-indicator-bar" style="display: none;">
+        <span id="modeText">Mode: Ready</span>
+        <span style="font-size: 0.78rem; color: var(--text-secondary, #94a3b8);">Press <strong>Esc</strong> to cancel</span>
+    </div>
+
+    <div class="graph-workspace">
+        <div class="graph-canvas">
+            <div id="graphCanvas"></div>
+            <div class="canvas-zoom-controls" style="position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; z-index: 20;">
+                <button type="button" id="zoomInBtn" class="btn btn-secondary btn-sm" title="Zoom In" aria-label="Zoom In" style="min-width: 32px; background: rgba(26, 26, 46, 0.9);">+</button>
+                <button type="button" id="zoomOutBtn" class="btn btn-secondary btn-sm" title="Zoom Out" aria-label="Zoom Out" style="min-width: 32px; background: rgba(26, 26, 46, 0.9);">&minus;</button>
+                <button type="button" id="zoomFitBtn" class="btn btn-secondary btn-sm" title="Fit Graph to View" aria-label="Fit Graph" style="background: rgba(26, 26, 46, 0.9);">Fit</button>
+            </div>
+            <div class="canvas-hint">Drag vertices to reposition &bull; Use +/&minus; buttons to zoom &bull; Click element to inspect</div>
+        </div>
+
+        <aside class="graph-panel">
+            <div class="panel-section">
+                <h3 class="panel-section-title">Graph Info</h3>
+                <div class="form-group">
+                    <label for="graphNameInput" class="form-label">Graph Name</label>
+                    <input type="text" id="graphNameInput" class="form-input" placeholder="e.g., Petersen Graph" value="Untitled Graph">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="graphDescInput" class="form-label">Description</label>
+                    <textarea id="graphDescInput" class="form-textarea" rows="2" placeholder="Optional graph notes or description..."></textarea>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3 class="panel-section-title">Statistics</h3>
+                <div class="panel-stats-grid">
+                    <div class="panel-stat-box">
+                        <span id="nodeCountStat" class="panel-stat-num">0</span>
+                        <span class="panel-stat-lbl">Nodes</span>
+                    </div>
+                    <div class="panel-stat-box">
+                        <span id="edgeCountStat" class="panel-stat-num">0</span>
+                        <span class="panel-stat-lbl">Edges</span>
+                    </div>
+                    <div class="panel-stat-box">
+                        <span id="densityStat" class="panel-stat-num">0.00</span>
+                        <span class="panel-stat-lbl">Density</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3 class="panel-section-title">Selected Element</h3>
+                <div id="noSelectionMsg" style="font-size: 0.82rem; color: var(--text-muted, #64748b); font-style: italic;">
+                    Click a node or edge on the canvas to inspect its properties.
+                </div>
+                <div id="selectedInfo" style="display: none;">
+                    <div class="info-row">
+                        <span class="info-row-label">Type</span>
+                        <span id="selectedType" class="badge">Node</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-row-label">ID</span>
+                        <span id="selectedId" class="font-mono">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-row-label">Label</span>
+                        <span id="selectedLabel">—</span>
+                    </div>
+                    <div class="info-row" id="degreeRow">
+                        <span class="info-row-label">Degree</span>
+                        <span id="selectedDegree">0</span>
+                    </div>
+                    <div class="info-row" id="endpointsRow" style="display: none;">
+                        <span class="info-row-label">Endpoints</span>
+                        <span id="selectedEndpoints" class="font-mono">—</span>
+                    </div>
+                    <div class="rename-row" id="renameRow">
+                        <label for="renameInput" class="form-label" style="margin-bottom: 0;">Rename Node</label>
+                        <div class="rename-input-group">
+                            <input type="text" id="renameInput" class="form-input" placeholder="New label">
+                            <button type="button" id="renameBtn" class="btn btn-secondary btn-sm">Rename</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3 class="panel-section-title">Quick Instructions</h3>
+                <ul class="instructions-list">
+                    <li>Select <strong>Add Node</strong> and click on the canvas to place vertices.</li>
+                    <li>Select <strong>Add Edge</strong>, then click a source node and a target node.</li>
+                    <li>Click any vertex or edge to inspect or rename it.</li>
+                    <li>Press <strong>Delete</strong> or click <strong>Remove Selected</strong> to delete elements.</li>
+                    <li>Use <strong>Sample Graphs</strong> or <strong>Random Graph</strong> to load test topologies.</li>
+                    <li>Click <strong>Analyse</strong> to compute matrices, eigenvalues, and connectivity.</li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+    <input type="file" id="importFileInput" accept=".json,.csv" style="display:none">
+
+    <div id="randomGraphDialog" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="randomDialogTitle">
+        <div class="modal-dialog card">
+            <div class="card-header">
+                <h3 id="randomDialogTitle" class="card-title">Generate Random Graph</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="randomNodeCount" class="form-label">Node Count (2–300)</label>
+                    <input type="number" id="randomNodeCount" class="form-input" value="8" min="2" max="300" step="1">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="randomEdgeProb" class="form-label">Edge Probability (0 to 1)</label>
+                    <input type="number" id="randomEdgeProb" class="form-input" value="0.3" min="0" max="1" step="0.05">
+                </div>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button type="button" id="cancelRandomBtn" class="btn btn-secondary btn-sm">Cancel</button>
+                <button type="button" id="generateRandomBtn" class="btn btn-primary btn-sm">Generate</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+<script src="{{ url_for('static', filename='js/graph_builder.js') }}?v=2.5"></script>
+{% endblock %}

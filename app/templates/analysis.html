@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+
+{% block title %}Spectral Analysis — SpectraGraph{% endblock %}
+
+{% block head %}
+<style>
+    .analysis-section {
+        margin-bottom: 24px;
+    }
+
+    .selection-controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 14px 0 10px;
+    }
+
+    .selection-controls .form-select {
+        max-width: 380px;
+    }
+
+    .loading-panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 36px 20px;
+    }
+
+    .spinner {
+        width: 24px;
+        height: 24px;
+        border: 3px solid rgba(255, 255, 255, 0.15);
+        border-top-color: var(--accent-primary, var(--accent-violet, #7c3aed));
+        border-radius: 50%;
+        animation: spectragraph-spin 0.8s linear infinite;
+    }
+
+    @keyframes spectragraph-spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .overview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 14px;
+    }
+
+    .overview-item {
+        padding: 12px 14px;
+        border-radius: var(--radius-sm, 8px);
+        background: var(--bg-secondary, rgba(255, 255, 255, 0.03));
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    }
+
+    .overview-item-label {
+        font-size: 0.78rem;
+        color: var(--text-secondary, #94a3b8);
+        margin-bottom: 4px;
+    }
+
+    .overview-item-value {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: var(--text-primary, #f1f5f9);
+    }
+
+    .matrix-container {
+        overflow-x: auto;
+        margin-top: 10px;
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+        border-radius: var(--radius-sm, 8px);
+    }
+
+    .matrix-table {
+        border-collapse: collapse;
+        font-family: var(--font-mono, monospace);
+        font-size: 0.85rem;
+        width: 100%;
+    }
+
+    .matrix-table th,
+    .matrix-table td {
+        padding: 8px 10px;
+        text-align: center;
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+    }
+
+    .matrix-table th {
+        background: var(--bg-secondary, rgba(255, 255, 255, 0.04));
+        color: var(--text-secondary, #94a3b8);
+        font-weight: 600;
+    }
+
+    .eigenvalue-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 12px 0 16px;
+    }
+
+    .eigenvalue-chip {
+        padding: 5px 12px;
+        border-radius: 9999px;
+        font-family: var(--font-mono, monospace);
+        font-size: 0.85rem;
+        background: var(--bg-secondary, rgba(255, 255, 255, 0.05));
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+    }
+
+    .eigenvalue-plot-wrap {
+        margin: 16px 0;
+        text-align: center;
+    }
+
+    #eigenvaluePlot {
+        max-width: 100%;
+        height: auto;
+        border-radius: var(--radius-sm, 8px);
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    }
+
+    .verification-box,
+    .agreement-banner {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: var(--radius-sm, 8px);
+        background: var(--bg-secondary, rgba(255, 255, 255, 0.03));
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+        font-size: 0.9rem;
+    }
+
+    .agreement-agree {
+        background: rgba(16, 185, 129, 0.12);
+        border-color: rgba(16, 185, 129, 0.4);
+        color: #10b981;
+        font-weight: 600;
+    }
+
+    .agreement-mismatch {
+        background: rgba(239, 68, 68, 0.12);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: #ef4444;
+        font-weight: 600;
+    }
+
+    .partition-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+    }
+
+    .partition-card {
+        background: var(--bg-secondary, rgba(255, 255, 255, 0.02));
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+        border-radius: var(--radius-sm, 8px);
+        padding: 12px;
+    }
+
+    .partition-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: var(--text-primary, #f1f5f9);
+    }
+
+    .partition-canvas {
+        width: 100%;
+        height: 340px;
+        min-height: 300px;
+        border-radius: var(--radius-sm, 8px);
+        background: var(--bg-canvas, #0f1219);
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+    }
+
+    .observations-list {
+        padding-left: 20px;
+        line-height: 1.7;
+        color: var(--text-secondary, #cbd5e1);
+    }
+
+    .observations-list li {
+        margin-bottom: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analysis-page">
+    <div class="page-header">
+        <h1 class="page-title">Spectral Analysis</h1>
+        <p class="page-subtitle">Laplacian matrix decomposition, spectral connectivity, three-method verification, and Fiedler bisection</p>
+    </div>
+
+    <!-- State 1: Graph Selection -->
+    <section id="graphSelectionSection" class="card analysis-section">
+        <div class="card-header">
+            <h2 class="card-title">Select Graph for Analysis</h2>
+        </div>
+        <div class="card-body">
+            <p>Select a graph to analyze, or build one in the <a href="/graph-builder">Graph Builder</a>.</p>
+            <div class="selection-controls">
+                <select id="graphSelect" class="form-select" aria-label="Select saved graph">
+                    <option value="">-- Select a saved graph --</option>
+                </select>
+                <button type="button" id="runAnalysisBtn" class="btn btn-primary">Analyse</button>
+            </div>
+            <p class="form-hint" style="margin-top: 8px; color: var(--text-secondary, #94a3b8);">
+                If you just came from Graph Builder, click Analyse there to see results.
+            </p>
+        </div>
+    </section>
+
+    <!-- Required 5+ Graph Demonstration Suite -->
+    <section id="demoSuiteSection" class="card analysis-section">
+        <div class="card-header">
+            <h2 class="card-title">Five+ Graph Spectral Verification (Live Run)</h2>
+            <button type="button" id="runDemoBtn" class="btn btn-secondary btn-sm">Run 6-Graph Verification</button>
+        </div>
+        <div class="card-body">
+            <p>
+                Verify the core theorem <span class="math-inline">dim(ker(L)) = k</span> across six canonical graphs (<span class="math-inline">P<sub>6</sub>, C<sub>6</sub>, K<sub>5</sub>, S<sub>6</sub>, 2&times;K<sub>3</sub>, Two-Community</span>) using live Laplacian eigenvalues, BFS, Union-Find, and Fiedler bisection.
+            </p>
+            <div id="demoResultsContainer" style="display: none; margin-top: 14px;">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Graph</th>
+                                <th>|V|</th>
+                                <th>|E|</th>
+                                <th>Zero Eigenvalues</th>
+                                <th>BFS</th>
+                                <th>Union-Find</th>
+                                <th>&lambda;<sub>2</sub></th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="demoResultsBody"></tbody>
+                    </table>
+                </div>
+                <div id="demoFiedlerSummary" class="math-highlight" style="margin-top: 12px;"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Loading State -->
+    <div id="analysisLoading" class="card analysis-section loading-panel" style="display: none;">
+        <div class="spinner" aria-hidden="true"></div>
+        <span>Running spectral analysis...</span>
+    </div>
+
+    <!-- State 2: Analysis Results -->
+    <div id="analysisResults" style="display: none;">
+        <!-- a. Graph Overview -->
+        <section id="resultOverview" class="card analysis-section">
+            <div class="card-header">
+                <h2 class="card-title">Graph Overview</h2>
+            </div>
+            <div class="card-body">
+                <div class="overview-grid">
+                    <div class="overview-item">
+                        <div class="overview-item-label">Graph Name</div>
+                        <div id="overviewName" class="overview-item-value">—</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="overview-item-label">Nodes (|V|)</div>
+                        <div id="overviewNodes" class="overview-item-value">0</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="overview-item-label">Edges (|E|)</div>
+                        <div id="overviewEdges" class="overview-item-value">0</div>
+                    </div>
+                    <div class="overview-item">
+                        <div class="overview-item-label">Density</div>
+                        <div id="overviewDensity" class="overview-item-value">0.000</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- b. Adjacency Matrix -->
+        <section id="resultAdjacency" class="card analysis-section">
+            <div class="card-header">
+                <h2 class="card-title">Adjacency Matrix A</h2>
+            </div>
+            <div class="card-body">
+                <p>Entry <em>A<sub>ij</sub></em> = 1 if vertices <em>v<sub>i</sub></em> and <em>v<sub>j</sub></em> share an edge, and 0 otherwise. For undirected simple graphs, <em>A</em> is symmetric with zeros along the main diagonal.</p>
+                <div class="matrix-container">
+                    <table id="adjacencyMatrixTable" class="matrix-table"></table>
+                </div>
+            </div>
+        </section>
+
+        <!-- c. Degree Matrix -->
+        <section id="resultDegree" class="card analysis-section">
+            <div class="card-header">
+                <h2 class="card-title">Degree Matrix D</h2>
+            </div>
+            <div class="card-body">
+                <p>Diagonal matrix where <em>D<sub>ii</sub></em> equals the degree deg(<em>v<sub>i</sub></em>) of vertex <em>i</em>, and all off-diagonal entries are 0.</p>
+                <div class="matrix-container">
+                    <table id="degreeMatrixTable" class="matrix-table"></table>
+                </div>
+            </div>
+        </section>
+
+        <!-- d. Laplacian Matrix -->
+        <section id="resultLaplacian" class="card analysis-section">
+            <div class="card-header">
+                <h2 class="card-title">Laplacian Matrix L = D &minus; A</h2>
+            </div>
+            <div class="card-body">
+                <div class="matrix-container">
+                    <table id="laplacianMatrixTable" class="matrix-table"></table>
+                </div>
+                <div id="laplacianVerification" class="verification-box">
+                    <span id="laplacianSymmetricStatus">Symmetric: —</span> &nbsp;|&nbsp;
+                    <span id="laplacianRowSumStatus">Row sums zero: —</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- e. Eigenvalues -->
+        <section id="resultEigenvalues" class="card analysis-section">
+            <div class="card-header">
+                <h2 class="card-title">Laplacian Eigenvalues</h2>
+                <span id="eigenMethodBadge" class="badge">—</span>
+            </div>
+            <div class="card-body">
+                <p class="math-theorem">Number of zero eigenvalues = number of connected components. Zero eigenvalues detected: <strong id="zeroCount">0</strong></p>
+                <div id="eigenvalueList" class="eigenvalue-chips"></div>
+                <div class="eigenvalue-plot-wrap">
+                    <img id="eigenvaluePlot" alt="Laplacian Eigenvalue Spectrum Plot" style="display: none;">
+                </div>
+            </div>
+        </section>
+
+        <!-- e2. Null Space of the Laplacian -->
+        <section id="resultNullSpace" class="card analysis-section">
+            <div class="card-header">
+                <h2 class="card-title">Null Space of the Laplacian (<span class="math-inline">ker(L)</span>)</h2>
+                <span id="nullSpaceDimBadge" class="badge badge-primary">dim = —</span>
+            </div>
+            <div class="card-body">
+                <p id="nullSpaceExplanation" class="math-highlight">Computing null space basis vectors...</p>
+                <p style="font-size: 0.85rem; color: var(--text-secondary);">
+                    Max verification residual <span class="math-inline">||Lv||<sub>&infin;</sub></span>: <strong id="nullSpaceResidual">—</strong>
+                </p>
+                <div id="nullSpaceVectors" class="null-space-grid"></div>
+            </div>
+        </section>
+
+        <!-- f. Connected Components Comparison -->
+        <section id="resultComponents" class="card analysis-section">
+            <div class="card-header">
+                <h2 class="card-title">Connected Components — Three-Method Comparison</h2>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Connected Components</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="componentsComparisonBody">
+                            <tr>
+                                <td><strong>Spectral</strong></td>
+                                <td id="spectralCompCount">—</td>
+                                <td id="spectralCompDetail">Multiplicity of &lambda; = 0 in <em>L</em></td>
+                            </tr>
+                            <tr>
+                                <td><strong>BFS</strong></td>
+                                <td id="bfsCompCount">—</td>
+                                <td id="bfsCompDetail">Breadth-First Search graph traversal</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Union-Find</strong></td>
+                                <td id="ufCompCount">—</td>
+                                <td id="ufCompDetail">Disjoint-Set Union with path compression</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="agreementStatus" class="agreement-banner"></div>
+            </div>
+        </section>
+
+        <!-- g. Fiedler Vector & Graph Partition -->
+        <section id="resultFiedler" class="card analysis-section">
+            <div class="card-header">
+                <h2 class="card-title">Fiedler Value &amp; Spectral Bisection</h2>
+            </div>
+            <div class="card-body">
+                <p>Algebraic connectivity (&lambda;<sub>2</sub>): <strong id="lambda2Value">—</strong></p>
+                <p id="fiedlerExplanation" style="margin-top: 8px; color: var(--text-secondary, #94a3b8);"></p>
+
+                <div id="fiedlerPartitionContent">
+                    <div class="table-container" style="margin-top: 14px;">
+                        <table id="fiedlerVectorTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Node Label</th>
+                                    <th>Fiedler Value (v<sub>2</sub>)</th>
+                                    <th>Group Assignment</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fiedlerTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="partition-grid">
+                        <div class="partition-card">
+                            <div class="partition-title">Before partition</div>
+                            <div id="graphBeforePartition" class="partition-canvas"></div>
+                            <p style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary);">
+                                Original connected graph with all vertices in uniform steel blue before spectral bisection.
+                            </p>
+                        </div>
+                        <div class="partition-card">
+                            <div class="partition-title">After partition</div>
+                            <div id="graphAfterPartition" class="partition-canvas"></div>
+                            <p style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary);">
+                                Spectral split by Fiedler vector (<span class="math-inline">v<sub>2</sub></span>): <strong>Violet</strong> = Group 1 (<span class="math-inline">v<sub>2</sub>(i) &ge; 0</span>), <strong>Teal</strong> = Group 2 (<span class="math-inline">v<sub>2</sub>(i) &lt; 0</span>).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- h. Mathematical Observations -->
+        <section id="resultObservations" class="card analysis-section">
+            <div class="card-header">
+                <h2 class="card-title">Mathematical Observations</h2>
+            </div>
+            <div class="card-body">
+                <ul id="observationsList" class="observations-list"></ul>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+<script src="{{ url_for('static', filename='js/analysis.js') }}"></script>
+{% endblock %}

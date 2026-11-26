@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — SpectraGraph{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+    <div class="page-header">
+        <h1 class="page-title">SpectraGraph Dashboard</h1>
+        <p class="page-subtitle">Spectral graph connectivity analysis via Laplacian eigenvalues, Fiedler vectors, and algorithmic verification</p>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-label">Saved Graphs</div>
+            <div class="stat-value">{{ stats.total_graphs if stats is defined and stats is not none else 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Nodes</div>
+            <div class="stat-value">{{ stats.total_nodes if stats is defined and stats is not none else 0 }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Edges</div>
+            <div class="stat-value">{{ stats.total_edges if stats is defined and stats is not none else 0 }}</div>
+        </div>
+    </div>
+
+    <div class="quick-actions-row" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;">
+        <a href="/graph-builder" class="btn btn-primary">Create New Graph</a>
+        <a href="/graph-builder?sample=petersen" class="btn btn-secondary">Load Sample Graph</a>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header">
+            <h2 class="card-title">About Spectral Connectivity Analysis</h2>
+        </div>
+        <div class="card-body">
+            <p>
+                Spectral graph connectivity analysis investigates the structure of an undirected graph <span class="math-inline">G = (V, E)</span> through the eigenvalues and eigenvectors of its Graph Laplacian matrix <span class="math-inline">L = D &minus; A</span>.
+            </p>
+            <div class="math-highlight">
+                By spectral graph theory, <span class="math-inline">dim(ker(L)) = k</span> (the multiplicity of <span class="math-inline">&lambda; = 0</span> equals the number of connected components), while <span class="math-inline">&lambda;<sub>2</sub></span> (algebraic connectivity) is positive if and only if the graph is connected.
+            </div>
+            <p>
+                SpectraGraph computes <span class="math-inline">A, D, L</span>, solves the symmetric eigenvalue problem (Jacobi rotation for small graphs, NumPy <span class="math-inline">eigh</span> for large graphs), verifies components via <strong>BFS</strong> and <strong>Union-Find</strong>, and partitions connected graphs using the <strong>Fiedler vector</strong>.
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Recent Graphs</h2>
+        </div>
+        <div class="card-body">
+            {% if recent_graphs and recent_graphs|length > 0 %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Nodes</th>
+                            <th>Edges</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for g in recent_graphs %}
+                        <tr>
+                            <td><strong>{{ g.name }}</strong></td>
+                            <td>{{ g.node_count if g.node_count is defined else (g.nodes|length if g.nodes is defined else 0) }}</td>
+                            <td>{{ g.edge_count if g.edge_count is defined else (g.edges|length if g.edges is defined else 0) }}</td>
+                            <td>{{ (g.created_at|string)[:10] if g.created_at else '—' }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="/graph-builder?id={{ g.id }}" class="btn btn-secondary btn-sm">Open</a>
+                                    <button type="button" onclick="deleteGraph({{ g.id }})" class="btn btn-danger btn-sm">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p class="empty-state-text">No graphs saved yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
